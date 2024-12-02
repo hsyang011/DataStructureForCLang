@@ -1,66 +1,113 @@
 ﻿#include <stdio.h>
 #include <stdlib.h>
-#define MAX_STACK_SIZE 100
 
-typedef int element; // int타입을 element라는 별명을 붙입니다. 나중에 Stack<char>등으로 바꾸고 싶을 때 이부분을 수정하면 됩니다.
+typedef int element;
+
 typedef struct {
-	element* data; // data는 포인터로 정의됩니다.
-	int capacity; // 현재 크기를 나타냅니다.
-	int front;
-	int rear;
-} Queue;
+    element* data;  // 덱 데이터를 저장할 동적 배열
+    int capacity;   // 덱의 최대 크기
+    int front;      // 덱의 앞쪽 인덱스
+    int rear;       // 덱의 뒤쪽 인덱스
+} Deque;
 
-// 큐 생성 함수
-void init_queue(Queue* q) {
-	q->front = -1;
-	q->rear = -1;
-	q->capacity = 1;
-	q->data = (element*)malloc(q->capacity * sizeof(element));
+// 덱 초기화 함수
+void init_deque(Deque* dq) {
+    dq->capacity = 4; // 초기 용량을 4로 설정
+    dq->data = (element*)malloc(dq->capacity * sizeof(element));
+    dq->front = 0;    // front를 0으로 설정
+    dq->rear = 0;     // rear를 0으로 설정
 }
 
-// 공백 상태 검출 함수
-int is_empty(Queue* q) {
-	return (q->front == q->rear);
+// 덱이 비어 있는지 확인
+int is_empty(Deque* dq) {
+    return dq->front == dq->rear;
 }
 
-// 포화 상태 검출 함수
-int is_full(Queue* q) {
-	return (q->rear == q->capacity - 1);
+// 덱이 가득 찼는지 확인
+int is_full(Deque* dq) {
+    return (dq->rear + 1) % dq->capacity == dq->front;
 }
 
-// 추가 함수
-void enqueue(Queue* q, element item) {
-	if (is_full(q)) {
-		q->capacity *= 2;
-		q->data = (element*)realloc(q->data, q->capacity * sizeof(element));
-	}
-	q->data[++(q->rear)] = item;
+// 덱 크기 확장
+void resize(Deque* dq) {
+    int new_capacity = dq->capacity * 2;
+    element* new_data = (element*)malloc(new_capacity * sizeof(element));
+
+    int i = dq->front;
+    int j = 0;
+    while (i != dq->rear) {
+        new_data[j++] = dq->data[i];
+        i = (i + 1) % dq->capacity;
+    }
+
+    free(dq->data);
+    dq->data = new_data;
+    dq->front = 0;
+    dq->rear = j;
+    dq->capacity = new_capacity;
 }
 
-// 삭제 함수
-element dequeue(Queue* q) {
-	if (is_empty(q)) {
-		fprintf(stderr, "큐 공백 에러\n");
-		exit(1);
-	}
-	else {
-		return q->data[++(q->front)];
-	}
+// 앞쪽에 데이터 추가
+void add_front(Deque* dq, element item) {
+    if (is_full(dq)) resize(dq);
+
+    dq->front = (dq->front - 1 + dq->capacity) % dq->capacity;
+    dq->data[dq->front] = item;
 }
 
+// 뒤쪽에 데이터 추가
+void add_rear(Deque* dq, element item) {
+    if (is_full(dq)) resize(dq);
+
+    dq->data[dq->rear] = item;
+    dq->rear = (dq->rear + 1) % dq->capacity;
+}
+
+// 앞쪽에서 데이터 삭제
+element delete_front(Deque* dq) {
+    if (is_empty(dq)) {
+        fprintf(stderr, "덱이 비어 있습니다.\n");
+        exit(1);
+    }
+
+    element item = dq->data[dq->front];
+    dq->front = (dq->front + 1) % dq->capacity;
+    return item;
+}
+
+// 뒤쪽에서 데이터 삭제
+element delete_rear(Deque* dq) {
+    if (is_empty(dq)) {
+        fprintf(stderr, "덱이 비어 있습니다.\n");
+        exit(1);
+    }
+
+    dq->rear = (dq->rear - 1 + dq->capacity) % dq->capacity;
+    return dq->data[dq->rear];
+}
+
+// 테스트용 메인 함수
 int main() {
-	Queue qu; // Queue타입 구조체 변수를 선언합니다.
-	init_queue(&qu); // Queue를 초기화합니다. malloc을 통해 동적 메모리 할당을 수행합니다.
+    Deque dq;
+    init_deque(&dq);
 
-	enqueue(&qu, 1); // 스택에 element를 추가합니다. 만약 스택이 가득 찼다면
-	enqueue(&qu, 2); // realloc을 통해 현재 사이즈의 2배만큼을 재할당 받습니다.
-	enqueue(&qu, 3);
+    for (int i=1; i<=3; i++) {
+        add_front(&dq, i);
+    }
 
-	printf("%d\n", dequeue(&qu));
-	printf("%d\n", dequeue(&qu));
-	printf("%d\n", dequeue(&qu));
+    for (int i=10; i<=12; i++) {
+        add_rear(&dq, i);
+    }
 
-	free(qu.data); // qu.data가 가리키는 포인터, 즉 malloc를 통해 할당 받은 메모리를 반환합니다.
+    for (int i=0; i<3; i++) {
+        printf("%d\n", delete_front(&dq)); // 3, 2, 1 출력
+    }
 
-	return 0;
+    for (int i=0; i<3; i++) {
+        printf("%d\n", delete_rear(&dq)); // 12, 11, 10 출력
+    }
+
+    free(dq.data);
+
+    return 0;
 }
